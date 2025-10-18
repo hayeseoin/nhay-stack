@@ -1,0 +1,15 @@
+services:  
+  whoami:
+    image: traefik/whoami
+    container_name: whoami
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`stack.nhay.es`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+    networks:
+      - nhay-stack
+
+networks:
+  nhay-stack:
+    external: true

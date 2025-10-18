@@ -1,0 +1,26 @@
+---
+- name: Install whoami for Traefik
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create whoami directory
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/whoami"
+        state: directory
+        mode: '0755'
+      become: no
+
+    - name: Deploy whoami compose file
+      ansible.builtin.copy:
+        src: whoami-compose.yml
+        dest: "/home/{{ ansible_user }}/whoami/docker-compose.yml"
+        mode: '0644'
+      become: no
+
+    - name: Start whoami
+      community.docker.docker_compose_v2:
+        project_src: "/home/{{ ansible_user }}/whoami"
+        state: present
+
+  

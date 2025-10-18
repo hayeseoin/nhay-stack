@@ -1,0 +1,77 @@
+---
+- name: Install Docker on Fedora
+  hosts: all
+  become: true
+  
+  tasks:
+    - name: Install required packages
+      ansible.builtin.dnf:
+        name:
+          - dnf-plugins-core
+          - vim
+        state: present
+
+    - name: Install Docker packages
+      ansible.builtin.dnf:
+        name:
+          - docker
+          - docker-compose
+        state: present
+
+    - name: Set SELinux boolean for Docker to connect to any socket
+      ansible.posix.seboolean:
+        name: container_manage_cgroup
+        state: true
+        persistent: true
+
+    - name: Start and enable Docker service
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add user to docker group (optional)
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+      when: ansible_user is defined
+
+    - name: Create Docker network nhay-stack
+      community.docker.docker_network:
+        name: nhay-stack
+        state: present
+
+    - name: Create Traefik directory
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/nhay-stack"
+        state: directory
+        mode: '0755'
+      become: no
+
+    - name: Deploy Traefik compose file
+      ansible.builtin.copy:
+        src: traefik-compose.yml
+        dest: "/home/{{ ansible_user }}/nhay-stack/docker-compose.yml"
+        mode: '0644'
+      become: no
+
+    - name: Start Traefik
+      community.docker.docker_compose_v2:
+        project_src: "/home/{{ ansible_user }}/nhay-stack"
+        state: present
+
+    # - name: Deploy Traefik container
+    #   community.docker.docker_container:
+    #     name: traefik
+    #     image: traefik:latest
+    #     state: started
+    #     restart_policy: unless-stopped
+    #     networks:
+    #       - name: nhay-stack
+    #     ports:
+    #       - "80:80"
+    #       - "443:443"
+    #       - "8080:8080"
+    #     volumes:
+    #       - /var/run/docker.sock:/var/run/docker.sock:ro
