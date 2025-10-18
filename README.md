@@ -34,3 +34,10 @@ nhay-stack/
     │   └── compose.yaml
     └── README.md
 ```
+---
+## To-do List
+
+ [ ] Install docker on a blank server
+ [ ] Create docker network
+ [ ] Create Traefik depoymenton that network
+ [ ] Create a basic new app with an `nhay-stack/compose.yaml` file which will deploy automatically to Traefik 
