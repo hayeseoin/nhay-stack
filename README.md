@@ -37,7 +37,21 @@ nhay-stack/
 ---
 ## To-do List
 
- [ ] Install docker on a blank server
- [ ] Create docker network
- [ ] Create Traefik depoymenton that network
- [ ] Create a basic new app with an `nhay-stack/compose.yaml` file which will deploy automatically to Traefik 
+ [✅] Install docker on a blank server
+ [✅] Create docker network
+ [✅] Create Traefik depoymenton that network
+ [] Create a basic new app with an `nhay-stack/compose.yaml` file which will deploy automatically to Traefik 
+
+## Progress
+
+Deploy a vm from `terraform/main.tf`
+The playbook `ansible/site.yml` installs docker and deploys a traefik container
+The playbook `ansible/whoami.yml` deploys a test app to Traefik
+
+Labels like this in `nhay-stack/compose.yml` should glue everything together
+```sh
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`stack.nhay.es`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+```
