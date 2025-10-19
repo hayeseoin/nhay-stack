@@ -55,3 +55,6 @@ Labels like this in `nhay-stack/compose.yml` should glue everything together
       - "traefik.http.routers.whoami.rule=Host(`stack.nhay.es`)"
       - "traefik.http.routers.whoami.entrypoints=web"
 ```
+
+[19-oct-25] 
+Created deploy.sh script which scans the 'nhay-stack' directory for compliant compose files and deploys them

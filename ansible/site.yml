@@ -1,7 +1,11 @@
 ---
 - name: Install Docker on Fedora
   hosts: all
-  become: true
+  vars:
+    nhay_stack_home: "/home/{{ ansible_user }}/nhay-stack"
+    nhay_stack_conf: "{{ nhay_stack_home}}/conf"
+    nhay_stack_d: "{{ nhay_stack_home}}/conf.d"
+    nhay_stack_bin: "{{ nhay_stack_home}}/bin"
   
   tasks:
     - name: Install required packages
@@ -9,7 +13,10 @@
         name:
           - dnf-plugins-core
           - vim
+          - git
+          - make
         state: present
+      become: yes
 
     - name: Install Docker packages
       ansible.builtin.dnf:
@@ -17,61 +24,79 @@
           - docker
           - docker-compose
         state: present
+      become: yes
 
-    - name: Set SELinux boolean for Docker to connect to any socket
-      ansible.posix.seboolean:
-        name: container_manage_cgroup
-        state: true
-        persistent: true
 
     - name: Start and enable Docker service
       ansible.builtin.systemd:
         name: docker
         state: started
         enabled: true
+      become: yes
 
-    - name: Add user to docker group (optional)
+
+    - name: Add user to docker group
       ansible.builtin.user:
         name: "{{ ansible_user }}"
         groups: docker
         append: true
-      when: ansible_user is defined
+      become: yes
+      register: docker_group_result
+
+    - name: Reset SSH connection to pick up new group membership
+      meta: reset_connection
+      changed_when: docker_group_result is changed
 
     - name: Create Docker network nhay-stack
       community.docker.docker_network:
         name: nhay-stack
         state: present
+      become: yes
+
+
+    - name: Create nhayStack Home
+      ansible.builtin.file:
+        path: "{{ nhay_stack_home }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create nhayStack bin 
+      ansible.builtin.file:
+        path: "{{ nhay_stack_bin }}"
+        state: directory
+        mode: '0755'
+
+    - name: Sync nhayStack bin
+      ansible.posix.synchronize:
+        src: bin
+        dest: "{{ nhay_stack_home }}"
+        delete: yes
+        recursive: yes
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=*.log"
+          - "--exclude=node_modules"
+      delegate_to: localhost
+    
+    - name: Create nhayStack include directory
+      ansible.builtin.file:
+        path: "{{ nhay_stack_d }}"
+        state: directory
+        mode: '0755'
 
     - name: Create Traefik directory
       ansible.builtin.file:
-        path: "/home/{{ ansible_user }}/nhay-stack"
+        path: "{{ nhay_stack_conf }}"
         state: directory
         mode: '0755'
-      become: no
-
+    
     - name: Deploy Traefik compose file
       ansible.builtin.copy:
         src: traefik-compose.yml
-        dest: "/home/{{ ansible_user }}/nhay-stack/docker-compose.yml"
+        dest: "{{ nhay_stack_conf }}/docker-compose.yml"
         mode: '0644'
-      become: no
 
     - name: Start Traefik
       community.docker.docker_compose_v2:
-        project_src: "/home/{{ ansible_user }}/nhay-stack"
+        project_src: "{{ nhay_stack_conf }}"
         state: present
-
-    # - name: Deploy Traefik container
-    #   community.docker.docker_container:
-    #     name: traefik
-    #     image: traefik:latest
-    #     state: started
-    #     restart_policy: unless-stopped
-    #     networks:
-    #       - name: nhay-stack
-    #     ports:
-    #       - "80:80"
-    #       - "443:443"
-    #       - "8080:8080"
-    #     volumes:
-    #       - /var/run/docker.sock:/var/run/docker.sock:ro
